@@ -1,0 +1,1 @@
+Restoring the original spacious SMIS PeopleOps interface while keeping manual login, CSV imports, dynamic department heads, comp-off requests, leave policies and holiday management.
