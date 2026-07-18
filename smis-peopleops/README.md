@@ -1,53 +1,72 @@
 # SMIS PeopleOps
 
-A Vercel-ready leave, comp-off, attendance, holiday, and employee-management system for St. Mary's institutions.
+Leave, comp-off credit, holiday, employee-login and department-head approval management for St. Mary's Institutions.
 
 ## Included
 
-- Google Workspace sign-in restricted to verified `@smis.edu.in` accounts
-- Permanent super admin: `sagar@smis.edu.in`
-- Super admin, admin/approver, and employee roles
-- Departments, new joiners, approver assignment, and employee status
-- Leave policies, balances, half-days, approvals, rejections, cancellations, and history
-- Comp-off credit, balance, and leave-against-comp-off
-- Holiday calendar and weekly-off configuration
-- Attendance check-in/out, late tracking, work duration, and attendance register
-- Pending-approval queues and team visibility
-- Multi-sheet Excel workbooks and print-to-PDF reports
-- Audit log for important changes
-- Responsive desktop and mobile interface
+- Manual username/password login; Google login removed
+- Permanent Super Admin: `sagar@smis.edu.in`
+- Add or update employee accounts manually
+- Bulk employee/login import through CSV
+- Dynamic department heads: assigning a department head automatically gives that employee Admin approval rights
+- Leave requests routed to the employee's department head
+- Dedicated comp-off workflow:
+  1. Employee submits a request for work completed on a holiday, weekly off or special-duty day
+  2. Department head approves or rejects the credit
+  3. Approved 0.5-day or 1-day credit is added to the employee's comp-off balance
+  4. Employee applies for Compensatory Off leave against the available balance
+- Add, update, deactivate or delete leave policies
+- Bulk leave-policy import through CSV
+- Add/delete holidays and bulk holiday import through CSV
+- Multi-sheet Excel exports and print/save-as-PDF reports
+- Complete audit history
+- Attendance check-in/check-out removed
 
-## Run locally
+## Demo logins
+
+```text
+sagar / Sagar@123
+principal / Admin@123
+teacher / Employee@123
+```
+
+The public Vercel build currently uses browser-local demo data. The complete source archive supplied with the project includes the backend-ready Postgres/manual-auth edition.
+
+## CSV formats
+
+### Employee and login import
+
+```csv
+employee_code,name,email,username,password,department_code,designation,role,active
+SMIS100,Sample Employee,sample@smis.edu.in,sample.user,ChangeMe@123,ACAD,Faculty,employee,true
+```
+
+### Leave-policy import
+
+```csv
+code,name,annual_allowance,paid,active
+CL,Casual Leave,12,true,true
+```
+
+### Holiday import
+
+```csv
+date,name,type,department_codes
+2026-08-15,Independence Day,National,
+2026-09-05,Teachers Day,Institution,ACAD
+```
+
+## Local validation
 
 ```bash
 npm install
+npm run typecheck
+npm run build
 npm run dev
 ```
 
-Production validation:
-
-```bash
-npm run typecheck
-npm run build
-```
-
-## Production environment
-
-```env
-NEXT_PUBLIC_GOOGLE_CLIENT_ID=your-google-client-id
-GOOGLE_CLIENT_ID=your-google-client-id
-ALLOWED_GOOGLE_DOMAIN=smis.edu.in
-SUPER_ADMIN_EMAIL=sagar@smis.edu.in
-```
-
-The production deployment currently opens in an interactive demo workspace so every workflow can be reviewed without credentials. Configure the Google variables above to activate verified Workspace login. Add a managed Postgres/Neon database when the system is moved from demo records to shared institutional data.
-
-## Google OAuth
-
-Create a Web OAuth client in the SMIS Google Cloud project and add the live Vercel domain to the authorised JavaScript origins. The server route validates the Google ID token, verified-email flag, hosted-domain claim, and exact email suffix before returning an application role.
-
 ## Deployment
 
-The application is designed for Next.js deployment on Vercel. Set the project root to `smis-peopleops` when deploying this repository branch.
+Set the Vercel project root to `smis-peopleops`.
 
-Live production application: https://hr-leave-tracking.vercel.app
+Live application: https://hr-leave-tracking.vercel.app
