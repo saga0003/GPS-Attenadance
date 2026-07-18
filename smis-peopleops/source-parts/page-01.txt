@@ -1,0 +1,78 @@
+useEffect(() => { localStorage.setItem(key, JSON.stringify(db)); }, [db]);
+  useEffect(() => { document.documentElement.dataset.theme = dark ? 'dark' : 'light'; }, [dark]);
+
+  const mutate = (fn: (draft: DB) => void, action: string) => setDb((old) => {
+    const draft = clone(old);
+    fn(draft);
+    draft.audit.unshift({ id: Date.now(), at: new Date().toLocaleString(), actor: user?.username || 'System', action });
+    return draft;
+  });
+
+  const department = db.departments.find((item) => item.code === user?.department);
+  const isSuper = user?.role === 'super_admin';
+  const isAdmin = user?.role === 'admin' || isSuper;
+  const scoped = <T extends { department: string }>(rows: T[]) => isSuper ? rows : rows.filter((row) => row.department === user?.department);
+  const pendingLeave = useMemo(() => scoped(db.leaves).filter((row) => row.status === 'Pending').length, [db, user]);
+  const pendingCredits = useMemo(() => scoped(db.credits).filter((row) => row.status === 'Pending').length, [db, user]);
+  const pending = pendingLeave + pendingCredits;
+  const compBalance = user ? db.compBalances[user.username] || 0 : 0;
+
+  const visibleNav = navItems.filter((item) => {
+    if (item.id === 'approvals') return isAdmin;
+    if (item.id === 'employees' || item.id === 'settings') return isSuper;
+    return true;
+  });
+
+  const login = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const username = String(form.get('username')).trim().toLowerCase();
+    const password = String(form.get('password'));
+    const found = db.employees.find((item) => item.active && item.username.toLowerCase() === username && item.password === password);
+    if (!found) return setNotice('Incorrect username or password.');
+    setUser(found);
+    setNotice('');
+  };
+
+  const approveLeave = (id: number, status: Status) => mutate((draft) => {
+    const request = draft.leaves.find((item) => item.id === id);
+    if (!request) return;
+    const head = draft.departments.find((item) => item.code === request.department)?.headUsername;
+    if (!isSuper && head !== user?.username) return;
+    request.status = status;
+    request.decidedBy = user?.name;
+    if (status === 'Approved' && request.useCompOff) {
+      draft.compBalances[request.username] = Math.max(0, (draft.compBalances[request.username] || 0) - request.days);
+    }
+  }, `${status} leave request #${id}`);
+
+  const approveCredit = (id: number, status: Status) => mutate((draft) => {
+    const request = draft.credits.find((item) => item.id === id);
+    if (!request) return;
+    const head = draft.departments.find((item) => item.code === request.department)?.headUsername;
+    if (!isSuper && head !== user?.username) return;
+    request.status = status;
+    request.decidedBy = user?.name;
+    if (status === 'Approved') draft.compBalances[request.username] = (draft.compBalances[request.username] || 0) + request.days;
+  }, `${status} comp-off credit #${id}`);
+
+  const applyLeave = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!user) return;
+    const form = new FormData(event.currentTarget);
+    const from = String(form.get('from'));
+    const to = String(form.get('to'));
+    const policy = String(form.get('policy'));
+    const useCompOff = policy === 'CO';
+    const days = daysBetween(from, to);
+    if (useCompOff && compBalance < days) return setNotice('Insufficient approved comp-off balance.');
+    mutate((draft) => draft.leaves.unshift({
+      id: Date.now(), employee: user.name, username: user.username, department: user.department,
+      policy, from, to, days, reason: String(form.get('reason')), status: 'Pending', useCompOff,
+    }), `Applied for ${days} day(s) ${useCompOff ? 'comp-off leave' : 'leave'}`);
+    event.currentTarget.reset();
+    setNotice(`Leave request sent to ${department?.name || 'department'} head.`);
+  };
+
+  const requestCredit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDef
