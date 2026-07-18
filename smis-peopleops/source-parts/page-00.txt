@@ -1,0 +1,44 @@
+'use client';
+
+import {
+  BadgeCheck, Building2, CalendarCheck, CalendarDays, Check, ChevronRight, CircleAlert,
+  ClipboardCheck, Download, FileSpreadsheet, Gift, History, Home, KeyRound, LogOut,
+  Moon, Palmtree, Plus, Search, Settings, ShieldCheck, Sparkles, Sun, TimerReset,
+  Trash2, Upload, UserCheck, UserPlus, Users, X
+} from 'lucide-react';
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+import * as XLSX from 'xlsx';
+import { DB, Employee, Role, Status, clone, csv, daysBetween, key, seed, today } from './data';
+
+type Tab = 'overview' | 'leave' | 'comp-off' | 'approvals' | 'employees' | 'settings' | 'reports';
+type Tone = 'green' | 'amber' | 'purple' | 'red';
+
+const navItems: Array<{ id: Tab; label: string; icon: React.ComponentType<{ size?: number }> }> = [
+  { id: 'overview', label: 'Dashboard', icon: Home },
+  { id: 'leave', label: 'My Leave', icon: Palmtree },
+  { id: 'comp-off', label: 'Comp-Off', icon: TimerReset },
+  { id: 'approvals', label: 'Approvals', icon: ClipboardCheck },
+  { id: 'employees', label: 'Employees & Logins', icon: Users },
+  { id: 'settings', label: 'Policies & Holidays', icon: Settings },
+  { id: 'reports', label: 'Reports & Export', icon: FileSpreadsheet },
+];
+
+const formatDate = (value: string) => value
+  ? new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(`${value}T00:00:00`))
+  : '—';
+
+export default function Page() {
+  const [db, setDb] = useState<DB>(seed);
+  const [user, setUser] = useState<Employee | null>(null);
+  const [tab, setTab] = useState<Tab>('overview');
+  const [notice, setNotice] = useState('');
+  const [dark, setDark] = useState(false);
+  const [search, setSearch] = useState('');
+  const file = useRef<HTMLInputElement>(null);
+  const importKind = useRef('employees');
+
+  useEffect(() => {
+    const raw = localStorage.getItem(key);
+    if (raw) try { setDb({ ...clone(seed), ...JSON.parse(raw) }); } catch { /* retain seed */ }
+  }, []);
+  
